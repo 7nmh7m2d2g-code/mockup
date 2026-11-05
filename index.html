@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>회차 댓글창</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 레이아웃: 모바일 뷰어 하단 댓글 패널, 단일 컬럼 */
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --fg:#1d1c1a; --muted:#7a766f; --line:#e7e3dc;
+  --accent:#e8532b; --accent-soft:#fdebe4; --chip:#f0ede7; --best:#2f6b5a;
+  --display:"Gowun Batang",serif; --body:"Noto Sans KR",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141312; --panel:#1d1c1a; --fg:#ece9e3; --muted:#9a958c; --line:#2e2c29;
+  --accent:#ff7550; --accent-soft:#3a231b; --chip:#2a2825; --best:#7cc4ad; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141312; --panel:#1d1c1a; --fg:#ece9e3; --muted:#9a958c; --line:#2e2c29;
+  --accent:#ff7550; --accent-soft:#3a231b; --chip:#2a2825; --best:#7cc4ad; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.ep{display:flex;flex-direction:column;gap:2px}
+.ep small{color:var(--muted);font-size:12px;letter-spacing:.04em}
+.ep h1{font-family:var(--display);font-size:22px;margin:0;text-wrap:balance}
+.ep .end{margin-top:10px;padding:14px;border-radius:12px;background:var(--panel);border:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ep .end p{margin:0;color:var(--muted);font-size:13px}
+.btn{font:inherit;border:0;cursor:pointer;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:500}
+.btn:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:var(--chip);color:var(--fg)}
+.head{display:flex;justify-content:space-between;align-items:baseline}
+.head h2{margin:0;font-size:17px}
+.head h2 span{color:var(--accent);font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:6px}
+.tabs button{background:none;border:0;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;padding:4px 2px}
+.tabs button[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.compose{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.compose textarea{width:100%;box-sizing:border-box;border:0;resize:vertical;min-height:64px;background:transparent;color:var(--fg);font:inherit}
+.compose .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.compose label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.count{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.list{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.c{padding:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px;min-width:0}
+.c:first-child{border-top:0}
+.c .meta{display:flex;gap:8px;align-items:center;font-size:13px;flex-wrap:wrap}
+.c .name{font-weight:700}
+.c .time{color:var(--muted);font-size:12px}
+.badge{font-size:11px;font-weight:700;padding:1px 7px;border-radius:4px}
+.badge.best{background:var(--best);color:var(--panel)}
+.badge.me{background:var(--accent-soft);color:var(--accent)}
+.c .text{margin:0;white-space:pre-wrap;word-break:break-word}
+.spoil{background:var(--chip);border:0;border-radius:8px;padding:10px;text-align:left;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.acts{display:flex;gap:14px;font-size:13px;color:var(--muted)}
+.acts button{background:none;border:0;font:inherit;color:inherit;cursor:pointer;padding:2px 0;display:flex;gap:4px;align-items:center;font-variant-numeric:tabular-nums}
+.acts button[aria-pressed="true"]{color:var(--accent);font-weight:700}
+.replies{margin-left:14px;padding-left:12px;border-left:2px solid var(--line);display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.replies .c{padding:0;border:0}
+.rbox{display:flex;gap:6px;margin-top:4px}
+.rbox input{flex:1;min-width:0;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:var(--bg);color:var(--fg);font:inherit;font-size:13px}
+.note{font-size:12px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="ep">
+    <small>투명드래곤 · 예시 회차</small>
+    <h1>48화 아무도 그를 볼 수 없었다</h1>
+    <div class="end">
+      <p>다음 화가 기다리고 있어요</p>
+      <button class="btn ghost" type="button" id="likeEp">♥ 이 회차 좋아요 <span id="epLikes">1,284</span></button>
+    </div>
+  </header>
+
+  <div class="head">
+    <h2>댓글 <span id="total">0</span></h2>
+    <div class="tabs" role="group" aria-label="정렬">
+      <button type="button" data-sort="best" aria-pressed="true">베스트순</button>
+      <button type="button" data-sort="new" aria-pressed="false">최신순</button>
+    </div>
+  </div>
+
+  <form class="compose" id="compose">
+    <textarea id="input" maxlength="300" placeholder="이 회차 어땠나요? 따뜻한 댓글은 작가에게 큰 힘이 됩니다."></textarea>
+    <div class="row">
+      <label><input type="checkbox" id="spoiler"> 스포일러 포함</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="count"><span id="len">0</span>/300</span>
+        <button class="btn primary" id="submit" disabled>등록</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="list" id="list"></div>
+  <p class="note">예시 댓글이에요. 직접 단 댓글은 이 브라우저에만 저장돼요.</p>
+</div>
+
+<script>
+const seed=[
+ {id:1,name:"용사지망생",text:"48화째 아무도 투명드래곤 못 봄ㅋㅋㅋㅋ 이쯤되면 독자인 나도 못 본 거 아니냐",likes:1842,dis:7,t:Date.now()-36e5*5,replies:[{name:"마왕군3팀",text:"투명하니까 보일 리가 없지 ㅇㅈ",t:Date.now()-36e5*4},{name:"엘프궁수",text:"그럼 지금까지 싸운 건 대체 뭐였음",t:Date.now()-36e5*3}]},
+ {id:2,name:"전투력측정기",text:"마왕 한 방에 날아가는 거 실화냐 밸런스 패치 시급",likes:913,dis:22,t:Date.now()-36e5*8,replies:[]},
+ {id:3,name:"스포요정",text:"마지막에 투명드래곤 사실 처음부터 주인공 옆에 있었음",spoiler:true,likes:154,dis:88,t:Date.now()-36e5*2,replies:[]},
+ {id:4,name:"새벽세시독자",text:"서사 없음 갈등 없음 패배 없음. 근데 왜 계속 보게 되냐고",likes:677,dis:2,t:Date.now()-6e5,replies:[]},
+ {id:5,name:"드래곤학자",text:"투명한데 울부짖는 소리는 들린다는 설정 은근 디테일 있음",likes:402,dis:5,t:Date.now()-864e5,replies:[]},
+ {id:6,name:"정주행3회차",text:"작가님 혹시 다음 화에서 투명드래곤보다 더 센 거 나오나요? 아 없겠구나",likes:288,dis:1,t:Date.now()-864e5*2,replies:[]}
+];
+let mine=[];try{mine=JSON.parse(localStorage.getItem("myComments")||"[]")}catch(e){}
+let liked={};try{liked=JSON.parse(localStorage.getItem("liked")||"{}")}catch(e){}
+let sort="best",openReply=null,revealed=new Set();
+const $=s=>document.querySelector(s);
+const save=()=>{try{localStorage.setItem("myComments",JSON.stringify(mine));localStorage.setItem("liked",JSON.stringify(liked))}catch(e){}};
+const ago=t=>{const m=Math.floor((Date.now()-t)/6e4);if(m<1)return"방금";if(m<60)return m+"분 전";const h=Math.floor(m/60);if(h<24)return h+"시간 전";return Math.floor(h/24)+"일 전"};
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const all=()=>[...mine,...seed];
+const score=c=>c.likes+(liked[c.id]==="up"?1:0);
+const bestIds=()=>seed.slice().sort((a,b)=>score(b)-score(a)).slice(0,3).filter(c=>!c.spoiler).map(c=>c.id);
+
+function render(){
+  const list=all();
+  const best=bestIds();
+  list.sort(sort==="best"?(a,b)=>(b.mine?1:0)-(a.mine?1:0)||score(b)-score(a):(a,b)=>b.t-a.t);
+  $("#total").textContent=list.reduce((n,c)=>n+1+c.replies.length,0).toLocaleString();
+  $("#list").innerHTML=list.map(c=>{
+    const up=liked[c.id]==="up",down=liked[c.id]==="down";
+    const body=c.spoiler&&!revealed.has(c.id)
+      ?`<button class="spoil" data-reveal="${c.id}">스포일러가 포함된 댓글이에요. 눌러서 보기</button>`
+      :`<p class="text">${esc(c.text)}</p>`;
+    return `<article class="c">
+      <div class="meta"><span class="name">${esc(c.name)}</span>
+        ${best.includes(c.id)&&sort==="best"?'<span class="badge best">BEST</span>':""}
+        ${c.mine?'<span class="badge me">내 댓글</span>':""}
+        <span class="time">${ago(c.t)}</span></div>
+      ${body}
+      <div class="acts">
+        <button data-vote="up" data-id="${c.id}" aria-pressed="${up}">👍 ${score(c).toLocaleString()}</button>
+        <button data-vote="down" data-id="${c.id}" aria-pressed="${down}">👎 ${(c.dis+(down?1:0)).toLocaleString()}</button>
+        <button data-reply="${c.id}">답글 ${c.replies.length||""}</button>
+        ${c.mine?`<button data-del="${c.id}">삭제</button>`:""}
+      </div>
+      ${c.replies.length||openReply===c.id?`<div class="replies">
+        ${c.replies.map(r=>`<div class="c"><div class="meta"><span class="name">${esc(r.name)}</span>${r.mine?'<span class="badge me">나</span>':""}<span class="time">${ago(r.t)}</span></div><p class="text">${esc(r.text)}</p></div>`).join("")}
+        ${openReply===c.id?`<form class="rbox" data-rform="${c.id}"><input id="r${c.id}" placeholder="답글 달기" maxlength="200"><button class="btn primary">등록</button></form>`:""}
+      </div>`:""}
+    </article>`}).join("");
+  if(openReply!==null){const i=$("#r"+openReply);i&&i.focus()}
+}
+$("#input").addEventListener("input",e=>{$("#len").textContent=e.target.value.length;$("#submit").disabled=!e.target.value.trim()});
+$("#compose").addEventListener("submit",e=>{e.preventDefault();const v=$("#input").value.trim();if(!v)return;
+  mine.unshift({id:"m"+Date.now(),name:"나",mine:true,text:v,spoiler:$("#spoiler").checked,likes:0,dis:0,t:Date.now(),replies:[]});
+  $("#input").value="";$("#len").textContent=0;$("#submit").disabled=true;$("#spoiler").checked=false;save();render()});
+$("#list").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.vote){const id=b.dataset.id;const key=isNaN(id)?id:+id;liked[key]=liked[key]===b.dataset.vote?undefined:b.dataset.vote;save();render()}
+  else if(b.dataset.reply){const id=b.dataset.reply;openReply=String(openReply)===id?null:(isNaN(id)?id:+id);render()}
+  else if(b.dataset.reveal){revealed.add(isNaN(b.dataset.reveal)?b.dataset.reveal:+b.dataset.reveal);render()}
+  else if(b.dataset.del){mine=mine.filter(c=>c.id!==b.dataset.del);save();render()}});
+$("#list").addEventListener("submit",e=>{e.preventDefault();const f=e.target;const id=f.dataset.rform;const key=isNaN(id)?id:+id;
+  const v=f.querySelector("input").value.trim();if(!v)return;const c=all().find(x=>x.id===key);
+  c.replies.push({name:"나",mine:true,text:v,t:Date.now()});openReply=null;save();render()});
+document.querySelectorAll("[data-sort]").forEach(b=>b.addEventListener("click",()=>{sort=b.dataset.sort;
+  document.querySelectorAll("[data-sort]").forEach(x=>x.setAttribute("aria-pressed",x===b));render()}));
+let epOn=false;$("#likeEp").addEventListener("click",()=>{epOn=!epOn;$("#epLikes").textContent=(1284+(epOn?1:0)).toLocaleString();$("#likeEp").style.color=epOn?"var(--accent)":""});
+render();
+</script>
+</body>
+</html>
