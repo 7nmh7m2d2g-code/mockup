@@ -28,7 +28,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* ── 본문 ── */
-#viewport{position:fixed;inset:0;overflow:hidden;touch-action:pan-y}
+#viewport{position:fixed;inset:0;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
 #book{position:absolute;top:calc(var(--st) + 64px);bottom:calc(var(--sb) + 48px);left:30px;
   column-gap:60px;column-fill:auto;font-family:var(--serif);font-weight:300;font-size:var(--fs);line-height:1.53;letter-spacing:0;
   word-break:normal;line-break:normal;text-align:justify;color:#111;will-change:transform}
@@ -531,17 +531,17 @@ function tap(x){
   if(!document.body.classList.contains("hideui")){document.body.classList.add("hideui");return}
   if(x<W*.28)prev();else if(x>W*.72)next();else document.body.classList.remove("hideui");
 }
-vp.addEventListener("touchstart",e=>down(e.touches[0].clientX,e.touches[0].clientY,vp),{passive:true});
-vp.addEventListener("touchmove",e=>move(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
-let lastTouch=0;
-vp.addEventListener("touchend",e=>{lastTouch=Date.now();if(!moved)e.preventDefault();up(e.changedTouches[0].clientX)},{passive:false});
-end.addEventListener("touchstart",e=>down(e.touches[0].clientX,e.touches[0].clientY,end),{passive:true});
-end.addEventListener("touchmove",e=>move(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
-end.addEventListener("touchend",e=>{lastTouch=Date.now();if(moved)up(e.changedTouches[0].clientX);else drag=false});
-let mouse=false;
-vp.addEventListener("mousedown",e=>{if(Date.now()-lastTouch<800)return;mouse=true;down(e.clientX,e.clientY,vp)});
-window.addEventListener("mousemove",e=>{if(mouse)move(e.clientX,e.clientY)});
-window.addEventListener("mouseup",e=>{if(mouse){mouse=false;up(e.clientX)}});
+function bindSwipe(el,isEnd){
+  let pid=null;
+  el.addEventListener("pointerdown",e=>{if(e.button>0||pid!==null)return;pid=e.pointerId;down(e.clientX,e.clientY,el)});
+  el.addEventListener("pointermove",e=>{if(e.pointerId===pid)move(e.clientX,e.clientY)});
+  const fin=e=>{if(e.pointerId!==pid)return;pid=null;
+    if(e.type==="pointercancel"){drag=false;if(moved&&!isEnd){go(page)}return}
+    if(isEnd&&!moved){drag=false;return}
+    up(e.clientX)};
+  el.addEventListener("pointerup",fin);el.addEventListener("pointercancel",fin);
+}
+bindSwipe(vp,false);bindSwipe(end,true);
 window.addEventListener("keydown",e=>{if($("#sheet").classList.contains("show"))return;if(e.key==="ArrowRight")next();if(e.key==="ArrowLeft")prev()});
 window.addEventListener("resize",()=>layout(true));
 if(window.visualViewport)visualViewport.addEventListener("resize",()=>layout(true));
