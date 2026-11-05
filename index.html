@@ -461,17 +461,26 @@ const save=()=>{try{localStorage.setItem("ak_mine",JSON.stringify(mine));localSt
 const vp=$("#viewport"),book=$("#book"),end=$("#end");
 let W=0,pages=1,page=0,atEnd=false;
 const FS=[16.5,18,19.5,21,23];let fsi=2;
+function countPages(){
+  const ps=book.querySelectorAll("p:not(.gap)"),lp=ps[ps.length-1],rg=document.createRange();rg.selectNodeContents(lp);
+  const rs=rg.getClientRects(),lr=rs[rs.length-1],bl=book.getBoundingClientRect().left;
+  const n=lr?Math.floor((lr.left-bl+1)/W)+1:Math.round((book.scrollWidth+60)/W);
+  return Math.max(1,n);
+}
 function layout(keep){
   const ratio=pages>1?page/(pages-1):0;
   W=vp.clientWidth;
   const cw=W-60;
   book.style.width=cw+"px";book.style.columnWidth=cw+"px";
-  const ps=book.querySelectorAll("p:not(.gap)"),lp=ps[ps.length-1],rg=document.createRange();rg.selectNodeContents(lp);
-  const rs=rg.getClientRects(),lr=rs[rs.length-1],bl=book.getBoundingClientRect().left;
-  pages=lr?Math.max(1,Math.floor((lr.left-bl+1)/W)+1):Math.max(1,Math.round((book.scrollWidth+60)/W));
+  pages=countPages();
   page=keep?Math.round(ratio*(pages-1)):Math.min(page,pages-1);
   $("#range").max=pages;$("#max").textContent=pages;
   go(page,false);
+}
+function refresh(){
+  if(vp.clientWidth!==W){layout(true);return}
+  const n=countPages();
+  if(n!==pages){pages=n;page=Math.min(page,pages-1);$("#range").max=pages;$("#max").textContent=pages;go(page,false)}
 }
 function go(p,anim=true){
   page=Math.max(0,Math.min(pages-1,p));
@@ -489,7 +498,7 @@ function showEnd(on,anim=true){
   document.body.classList.toggle("hideui",on||document.body.classList.contains("hideui"));
   if(on)document.body.classList.add("hideui");
 }
-function next(){if(atEnd)return;if(page<pages-1)go(page+1);else showEnd(true)}
+function next(){if(atEnd)return;refresh();if(page<pages-1)go(page+1);else showEnd(true)}
 function prev(){if(atEnd){showEnd(false);return}go(page-1)}
 
 /* 스와이프 */
@@ -524,16 +533,21 @@ function tap(x){
 }
 vp.addEventListener("touchstart",e=>down(e.touches[0].clientX,e.touches[0].clientY,vp),{passive:true});
 vp.addEventListener("touchmove",e=>move(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
-vp.addEventListener("touchend",e=>up(e.changedTouches[0].clientX));
+let lastTouch=0;
+vp.addEventListener("touchend",e=>{lastTouch=Date.now();if(!moved)e.preventDefault();up(e.changedTouches[0].clientX)},{passive:false});
 end.addEventListener("touchstart",e=>down(e.touches[0].clientX,e.touches[0].clientY,end),{passive:true});
 end.addEventListener("touchmove",e=>move(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
-end.addEventListener("touchend",e=>{if(moved)up(e.changedTouches[0].clientX);else drag=false});
+end.addEventListener("touchend",e=>{lastTouch=Date.now();if(moved)up(e.changedTouches[0].clientX);else drag=false});
 let mouse=false;
-vp.addEventListener("mousedown",e=>{mouse=true;down(e.clientX,e.clientY,vp)});
+vp.addEventListener("mousedown",e=>{if(Date.now()-lastTouch<800)return;mouse=true;down(e.clientX,e.clientY,vp)});
 window.addEventListener("mousemove",e=>{if(mouse)move(e.clientX,e.clientY)});
 window.addEventListener("mouseup",e=>{if(mouse){mouse=false;up(e.clientX)}});
 window.addEventListener("keydown",e=>{if($("#sheet").classList.contains("show"))return;if(e.key==="ArrowRight")next();if(e.key==="ArrowLeft")prev()});
 window.addEventListener("resize",()=>layout(true));
+if(window.visualViewport)visualViewport.addEventListener("resize",()=>layout(true));
+if(window.ResizeObserver)new ResizeObserver(()=>refresh()).observe(book);
+window.addEventListener("load",()=>layout(true));
+setTimeout(()=>layout(true),1500);
 
 $("#range").addEventListener("input",e=>go(+e.target.value-1));
 $("#font").onclick=()=>{fsi=(fsi+1)%FS.length;document.documentElement.style.setProperty("--fs",FS[fsi]+"px");layout(true);toast(`글자 크기 ${fsi+1}단계`)};
@@ -544,7 +558,7 @@ $("#listenBtn").onclick=()=>toast("듣기모드는 준비 중이에요");
 $("#prevEp").onclick=()=>toast("1화가 첫 화예요");
 $("#nextEp").onclick=$("#nextCard").onclick=()=>toast("2화는 아직 없어요");
 $("#homeBtn").onclick=()=>toast("작품홈은 예시 화면이라 없어요");
-$("#toEnd").onclick=()=>{go(pages-1);showEnd(true)};
+$("#toEnd").onclick=()=>{refresh();go(pages-1);showEnd(true)};
 $("#firstBtn").onclick=()=>{showEnd(false,false);go(0,false)};
 
 /* 평점·좋아요·공유 */
