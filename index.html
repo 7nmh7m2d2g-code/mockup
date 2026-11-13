@@ -55,7 +55,11 @@ body.scroll #end{position:static;inset:auto;transform:none!important;transition:
 .quote{margin:4px 18px 0;padding:12px 14px;background:var(--sheet2);border-radius:12px;font-family:var(--serif);font-weight:300;font-size:15px;line-height:1.6;color:var(--sheet-ink);max-height:7.5em;overflow:auto}
 #pcSheet{height:72%}
 #choice{break-before:column;-webkit-column-break-before:always;display:flex;flex-direction:column;justify-content:center;gap:14px;text-indent:0;font-family:var(--sans)}
-body:not(.scroll) #choice{height:calc(var(--colh,70vh) - 1px)}
+#chPage{position:fixed;inset:0;background:var(--paper);z-index:9;transform:translateX(100%);will-change:transform;display:flex;align-items:center;justify-content:center;touch-action:none;
+  padding:calc(var(--st) + 24px) max(30px,env(safe-area-inset-right,0px)) calc(var(--sb) + 40px) max(30px,env(safe-area-inset-left,0px))}
+#chPage #choice{width:100%;max-width:560px;break-before:auto}
+body.scroll #chPage{display:none}
+body:not(.scroll) .route.show>p:first-child{break-before:column;-webkit-column-break-before:always}
 body.scroll #choice{padding:56px 0 40px}
 #choice .q{font-size:14px;color:var(--sub);text-align:center;font-weight:500;margin:0 0 4px;text-indent:0}
 .opt{display:block;width:100%;text-align:left;border:1.5px solid var(--line);border-radius:16px;padding:16px 18px;background:var(--paper);font-family:var(--serif);font-weight:300;font-size:calc(var(--fs) * .95);line-height:1.5;color:var(--ink);transition:opacity .2s,border-color .2s,background .2s}
@@ -245,7 +249,7 @@ body.scroll.nochoice #end{display:none}
     <div id="choice">
       <p class="q">윤정은 뭐라고 대답할까?</p>
       <button class="opt" data-pick="1" type="button"><small>선택 1</small>“……저, 잘못 들어온 것 같아요.”</button>
-      <button class="opt" data-pick="2" type="button"><small>선택 2</small>“신화고에 다닐 학비는 있고요?”</button>
+      <button class="opt" data-pick="2" type="button"><small>선택 2</small>“풋, 신화고에 다닐 학비는 있고요?”</button>
       <p class="hint">고른 대답에 따라 이야기가 달라져요</p>
     </div>
     <div class="route" data-route="1">
@@ -335,7 +339,7 @@ body.scroll.nochoice #end{display:none}
     <p>“진짜 큰일이네.”</p>
     </div>
     <div class="route" data-route="2">
-    <p>“신화고에 다닐 학비는 있고요?”</p>
+    <p>“풋, 신화고에 다닐 학비는 있고요?”</p>
     <p>말이 입 밖으로 나오고 나서야 윤정은 제가 무슨 말을 했는지 깨달았다.</p>
     <p>아니, 정확히는 알고서 한 말이었다.</p>
     <p>원작의 김윤정이라면 셔터를 내리러 오기 전에 이 집 사람들 기부터 꺾어 놓았을 것이다.</p>
@@ -441,6 +445,7 @@ body.scroll.nochoice #end{display:none}
   </div>
 </div>
 
+<section id="chPage" aria-label="선택지"></section>
 <section id="end" aria-label="회차 끝">
   <div class="endwrap">
     <div class="note">
@@ -514,7 +519,19 @@ const save=()=>{try{localStorage.setItem(KEY+"mine",JSON.stringify(mine));localS
 /* ── 선택지 ── */
 const HAS_CHOICE=!!document.getElementById("choice");
 let choice=null;
-function choicePage(){const c=$("#choice"),bl=book.getBoundingClientRect().left;return Math.max(0,Math.floor((c.getBoundingClientRect().left-bl+1)/(W||1)))}
+const chPage=document.getElementById("chPage"),choiceEl=document.getElementById("choice");
+let atChoice=false;
+function placeChoice(){
+  if(!HAS_CHOICE)return;
+  if(scrollMode){book.insertBefore(choiceEl,book.querySelector(".route"))}
+  else{chPage.appendChild(choiceEl)}
+}
+function routeStart(){const r=document.querySelector(".route.show p");if(!r)return pages;const bl=book.getBoundingClientRect().left;return Math.max(0,Math.floor((r.getBoundingClientRect().left-bl+1)/(W||1)))}
+function lastMain(){return HAS_CHOICE&&choice?routeStart()-1:pages-1}
+function choicePage(){return lastMain()}
+function showChoice(anim=true){atChoice=true;document.body.classList.add("hideui");chPage.style.transition=anim?"transform .3s ease":"none";chPage.style.transform="translateX(0)"}
+function hideChoice(dir,anim=true){atChoice=false;chPage.style.transition=anim?"transform .3s ease":"none";chPage.style.transform=dir<0?"translateX(-100%)":"translateX(100%)";
+  if(dir<0)setTimeout(()=>{if(!atChoice){chPage.style.transition="none";chPage.style.transform="translateX(100%)"}},350)}
 function nudge(){toast("윤정의 대답을 먼저 골라 주세요");const c=$("#choice");if(c){c.animate&&c.animate([{transform:"translateX(0)"},{transform:"translateX(-6px)"},{transform:"translateX(6px)"},{transform:"translateX(0)"}],{duration:260})}}
 function applyChoice(){
   if(!HAS_CHOICE)return;
@@ -527,7 +544,7 @@ function pick(k){
   const first=!choice;choice=k;try{localStorage.setItem(KEY+"choice",k)}catch(e){}
   applyChoice();
   if(scrollMode){const r=document.querySelector('.route[data-route="'+k+'"]');setTimeout(()=>vp.scrollTo({top:r.offsetTop-90,behavior:"smooth"}),120);return}
-  const cp=choicePage();layout(false);go(cp,false);setTimeout(()=>go(cp+1),first?220:160);
+  layout(false);setTimeout(()=>{go(routeStart(),false);hideChoice(-1)},first?260:180);
 }
 
 /* ── 페이지 ── */
@@ -536,8 +553,8 @@ let W=0,pages=1,page=0,atEnd=false,scrollMode=false;
 const endHome=end.parentNode,endNext=end.nextSibling;
 const FS=[16.5,18,19.5,21,23];let fsi=2;
 function countPages(){
-  const ps=[...book.querySelectorAll("p:not(.gap), #choice")].filter(x=>x.getClientRects().length),lp=ps[ps.length-1],rg=document.createRange();rg.selectNodeContents(lp);
-  const rs=lp.id==="choice"?lp.getClientRects():rg.getClientRects(),lr=rs[rs.length-1],bl=book.getBoundingClientRect().left;
+  const ps=[...book.querySelectorAll("p:not(.gap)")].filter(x=>x.getClientRects().length),lp=ps[ps.length-1],rg=document.createRange();rg.selectNodeContents(lp);
+  const rs=rg.getClientRects(),lr=rs[rs.length-1],bl=book.getBoundingClientRect().left;
   const n=lr?Math.floor((lr.left-bl+1)/W)+1:Math.round((book.scrollWidth+60)/W);
   return Math.max(1,n);
 }
@@ -560,7 +577,6 @@ function refresh(){
   if(n!==pages){pages=n;page=Math.min(page,pages-1);$("#range").max=pages;$("#max").textContent=pages;go(page,false)}
 }
 function go(p,anim=true){
-  if(HAS_CHOICE&&!choice&&!scrollMode)p=Math.min(p,choicePage());
   page=Math.max(0,Math.min(pages-1,p));
   book.style.transition=anim?"transform .3s ease":"none";
   book.style.transform=`translateX(${-page*W}px)`;
@@ -588,6 +604,7 @@ function setMode(on,quiet){
   const ratio=on?(pages>1?page/(pages-1):0):scrollRatio();
   if(atEnd&&on){atEnd=false}
   scrollMode=on;document.body.classList.toggle("scroll",on);
+  if(HAS_CHOICE){if(atChoice)hideChoice(1,false);placeChoice()}
   if(on){
     vp.appendChild(end);
     requestAnimationFrame(()=>{vp.scrollTop=ratio*(book.offsetHeight-vp.clientHeight*.6);updScroll()});
@@ -605,8 +622,16 @@ vp.addEventListener("scroll",()=>{if(!scrollMode)return;
   const y=vp.scrollTop;if(Math.abs(y-lastY)>12){document.body.classList.add("hideui");lastY=y}
   updScroll()},{passive:true});
 $("#modeBtn").onclick=()=>setMode(!scrollMode);
-function next(){if(atEnd)return;refresh();if(HAS_CHOICE&&!choice&&page>=choicePage()){nudge();return}if(page<pages-1)go(page+1);else showEnd(true)}
-function prev(){if(atEnd){showEnd(false);return}go(page-1)}
+function nextPanel(){if(HAS_CHOICE&&page===lastMain()&&(!choice||true))return chPage;return page===pages-1?end:null}
+function next(){if(atEnd)return;
+  if(atChoice){if(!choice){nudge();return}go(routeStart(),false);hideChoice(-1);return}
+  refresh();
+  if(HAS_CHOICE&&page>=lastMain()&&(!choice||page===lastMain())){showChoice();return}
+  if(page<pages-1)go(page+1);else showEnd(true)}
+function prev(){if(atEnd){showEnd(false);return}
+  if(atChoice){hideChoice(1);return}
+  if(HAS_CHOICE&&choice&&page===routeStart()){go(lastMain(),false);showChoice();return}
+  go(page-1)}
 
 /* 스와이프 */
 let sx=0,sy=0,dx=0,drag=false,moved=false,src=null;
@@ -626,7 +651,7 @@ function move(x,y){
     let off=dx;
     if(page===0&&dx>0)off=dx/3;
     book.style.transition="none";book.style.transform=`translateX(${-page*W+off}px)`;
-    if(page===pages-1&&dx<0){end.style.transition="none";end.style.transform=`translateX(${W+dx}px)`}
+    const np=nextPanel();if(np&&dx<0){np.style.transition="none";np.style.transform=`translateX(${W+dx}px)`}
   }
 }
 function up(x){
@@ -637,7 +662,7 @@ function up(x){
   if(!moved){tap(x);return}
   const th=W*.18;
   if(atEnd){dx>th?showEnd(false):showEnd(true);return}
-  if(dx<-th)next();else if(dx>th)prev();else{go(page);if(page===pages-1)showEnd(false)}
+  if(dx<-th)next();else if(dx>th)prev();else{const np=nextPanel();go(page);if(np===end)showEnd(false);else if(np)hideChoice(1)}
 }
 function tap(x){
   if(atEnd)return;
@@ -662,6 +687,12 @@ function bindSwipe(el,isEnd){
   el.addEventListener("pointerup",fin);el.addEventListener("pointercancel",fin);
 }
 bindSwipe(vp,false);bindSwipe(end,true);
+if(HAS_CHOICE){let cx=null,cy=0;
+  chPage.addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;cx=e.clientX;cy=e.clientY});
+  chPage.addEventListener("pointerup",e=>{if(cx===null)return;const dx=e.clientX-cx,dy=e.clientY-cy;cx=null;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){dx<0?next():prev()}
+    else if(Math.abs(dx)<8&&Math.abs(dy)<8){const x=e.clientX;if(x<W*.28)prev();else if(x>W*.72)next()}});
+  chPage.addEventListener("pointercancel",()=>{cx=null})}
 window.addEventListener("keydown",e=>{if(scrollMode||$("#sheet").classList.contains("show")||pcOpen>=0)return;if(e.key==="ArrowRight")next();if(e.key==="ArrowLeft")prev()});
 window.addEventListener("resize",()=>layout(true));
 if(window.visualViewport)visualViewport.addEventListener("resize",()=>layout(true));
@@ -678,8 +709,8 @@ $("#listenBtn").onclick=()=>toast("듣기모드는 준비 중이에요");
 $("#prevEp").onclick=()=>{location.href="ep1.html"};
 $("#nextEp").onclick=$("#nextCard").onclick=()=>toast("3화는 아직 없어요");
 $("#homeBtn").onclick=()=>toast("작품홈은 예시 화면이라 없어요");
-$("#toEnd").onclick=()=>{if(HAS_CHOICE&&!choice){if(scrollMode)vp.scrollTo({top:$("#choice").offsetTop-80,behavior:"smooth"});else go(choicePage());nudge();return}if(scrollMode){vp.scrollTo({top:end.offsetTop,behavior:"smooth"});return}refresh();go(pages-1);showEnd(true)};
-$("#firstBtn").onclick=()=>{if(scrollMode){vp.scrollTop=0;updScroll();return}showEnd(false,false);go(0,false)};
+$("#toEnd").onclick=()=>{if(HAS_CHOICE&&!choice){if(scrollMode)vp.scrollTo({top:$("#choice").offsetTop-80,behavior:"smooth"});else{go(pages-1,false);showChoice()}nudge();return}if(scrollMode){vp.scrollTo({top:end.offsetTop,behavior:"smooth"});return}refresh();go(pages-1);showEnd(true)};
+$("#firstBtn").onclick=()=>{if(scrollMode){vp.scrollTop=0;updScroll();return}showEnd(false,false);if(HAS_CHOICE)hideChoice(1,false);go(0,false)};
 
 /* 평점·좋아요·공유 */
 let myRate=0;
@@ -805,7 +836,7 @@ if(PC_ON)drawBubbles();
 if(PC_ON)try{if(!localStorage.getItem("ak_pchint")){setTimeout(()=>toast("문장을 꾹 누르면 그 문장에 댓글을 달 수 있어요"),1200);localStorage.setItem("ak_pchint","1")}}catch(e){}
 
 try{choice=HAS_CHOICE?localStorage.getItem(KEY+"choice"):null}catch(e){}
-applyChoice();
+applyChoice();placeChoice();
 document.querySelectorAll(".opt").forEach(b=>b.addEventListener("click",()=>pick(b.dataset.pick)));
 drawRate();counts();
 try{if(localStorage.getItem("ak_mode")==="scroll")setTimeout(()=>setMode(true,true),50)}catch(e){}
